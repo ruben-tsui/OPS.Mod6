@@ -157,7 +157,7 @@ class Window(QtWidgets.QDialog):
         self.radio_Bull.clicked.connect(self.on_click_Bull)
         self.radio_Bear.clicked.connect(self.on_click_Bear)
         self.radio_Butterfly.clicked.connect(self.on_click_Butterfly)
-        #self.radio_Custom.clicked.connect(self.on_click_Custom)
+        self.radio_Custom.clicked.connect(self.on_click_Custom)
 
         # Define behavior of a C/P spinbox when clicked
         #self.spin_C1.valueChanged.connect(self.on_click_spin_C1) 
@@ -165,6 +165,7 @@ class Window(QtWidgets.QDialog):
 
         # set dialog window size
         self.setGeometry(0, 0, 1320, 768)
+        self.setFixedSize(1320, 768)
         # set default option to Call
         self.groupBox_Call.setGeometry(830, 270, 271, 221)
         # set default strategy to Bull
@@ -189,6 +190,16 @@ class Window(QtWidgets.QDialog):
 
     def on_click_spin_CP(self):
         self.radio_Custom.setChecked(True)
+
+    def on_click_Custom(self):
+        if self.radio_Call.isChecked():
+            self.spin_C1.setValue(1)
+            self.spin_C2.setValue(-1)
+            self.spin_C3.setValue(1)
+        elif self.radio_Put.isChecked():
+            self.spin_P1.setValue(1)
+            self.spin_P2.setValue(-1)
+            self.spin_P3.setValue(1)
 
     def on_click_Bull(self):
         if self.radio_Bull.isChecked():
@@ -233,15 +244,43 @@ class Window(QtWidgets.QDialog):
     ## The following 2 functions are for selecting between the Call and Put option in the Groupbox
     def on_click_Call(self):
         if self.radio_Call.isChecked():
+            self.disable_connection_from_spin_CP_to_radio_Custom()
+            config = [None, None, None]
             self.groupBox_Put.setGeometry(1340, 270, 271, 221)  # reset Put groupbox's position (off-screen)
             self.groupBox_Call.setGeometry(830, 270, 271, 221)  # move Call groupbox to "on-screen" position
+            if self.radio_Bull.isChecked():
+                config = [1, -1, 0]
+            elif self.radio_Bear.isChecked():
+                config = [-1, 1, 0]
+            elif self.radio_Butterfly.isChecked():
+                config = [1, -2, 1]
+            elif self.radio_Custom.isChecked():
+                config = [1, -1, 1]
+            self.spin_C1.setValue(config[0])
+            self.spin_C2.setValue(config[1])
+            self.spin_C3.setValue(config[2])
+            self.enable_connection_from_spin_CP_to_radio_Custom()
         self.on_click_NewSim()
         #self.showGraph()
 
     def on_click_Put(self):
         if self.radio_Put.isChecked():
+            self.disable_connection_from_spin_CP_to_radio_Custom()
+            config = [None, None, None]
             self.groupBox_Call.setGeometry(1340, 20, 271, 221)  # reset Call groupbox's position (off-screen)
             self.groupBox_Put.setGeometry(830, 270, 271, 221)   # move Put groupbox to "on-screen" position
+            if self.radio_Bull.isChecked():
+                config = [1, -1, 0]
+            elif self.radio_Bear.isChecked():
+                config = [-1, 1, 0]
+            elif self.radio_Butterfly.isChecked():
+                config = [1, -2, 1]
+            elif self.radio_Custom.isChecked():
+                config = [1, -1, 1]
+            self.spin_P1.setValue(config[0])
+            self.spin_P2.setValue(config[1])
+            self.spin_P3.setValue(config[2])
+            self.enable_connection_from_spin_CP_to_radio_Custom()
         self.on_click_NewSim()
         #self.showGraph()
         
@@ -692,14 +731,17 @@ class Window(QtWidgets.QDialog):
                 main_title += f"${w} P_{j+1}$ "
 
         s1.set_title(main_title, fontsize=12, color='brown')
-        s1.set_aspect(aspect=1.0)
+        #s1.set_aspect(aspect=1.0)
         s1.yaxis.set_tick_params(labelright=False, labelleft=True)
         s1.grid(True)
         s1.plot(x, z, 'b-.', lw=1.5) # payoff
         s1.set_xlim(right=s1_x_max, left=s1_x_min)
-        s1.set_ylim(top=20, bottom=-20)
+        #s1.set_ylim(top=20, bottom=-20)
 
         # plot a number of option value curves (from 0 to 5)
+        (y_bottom, y_top) =  s1.get_ylim()
+        y_inc = (y_top - y_bottom)*0.15 
+        s1.set_ylim(top=y_top+y_inc, bottom=y_bottom-y_inc)
         for i in range(0, k+1):
             y_call1 = bsm.bs_call_price(x, K_C1, r, q, σ, T_C1*(1-i/(self.simSteps)))
             y_call2 = bsm.bs_call_price(x, K_C2, r, q, σ, T_C2*(1-i/(self.simSteps)))
@@ -716,7 +758,9 @@ class Window(QtWidgets.QDialog):
             #y      = α1 * y_call + β1 * y_put
             # plot option value curve          
             #s1.plot(x, y, 'red', alpha=0.6, lw=0.4+0.05*i, label=f'value = {put_circle_y + call_circle_y}')
+            #s1.plot(x, y, 'red', alpha=0.6, lw=0.4+0.05*i)
             s1.plot(x, y, 'red', alpha=0.6, lw=0.4+0.05*i)
+
             #s1.legend(loc='upper left', shadow=False, fontsize='medium')
             
         # Now plot the circles
